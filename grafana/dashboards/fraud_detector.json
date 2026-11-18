@@ -1,0 +1,264 @@
+{
+  "uid": "fraud-detection",
+  "title": "Поток и скоринг",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "timezone": "browser",
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Скорость потока и смена модели",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "Оранжевая полоса показывает 30 секунд после загрузки новой версии модели. Версия указана в легенде и подсказке.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "custom": {
+            "fillOpacity": 12
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 1
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "hidden"
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "bars"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 28
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(transactions_total{job=\"scorer\"}[15s]))",
+          "legendFormat": "Транзакций/с",
+          "format": "time_series",
+          "range": true
+        },
+        {
+          "refId": "B",
+          "expr": "(model_version_last_loaded_timestamp_seconds{job=\"scorer\"} > (time() - 30)) * 0 + 1",
+          "legendFormat": "Модель {{version}}",
+          "format": "time_series",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Доля фрода",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "Доля транзакций с флагом фрода с момента запуска скоринга.",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 8,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "fraud_ratio{job=\"scorer\"}",
+          "legendFormat": "Флаг фрода",
+          "format": "time_series",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Время обработки и подготовки признаков",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "Среднее время полной обработки и 95-й процентиль времени подготовки признаков за последние 30 секунд.",
+      "gridPos": {
+        "x": 8,
+        "y": 8,
+        "w": 16,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(transaction_processing_seconds_sum{job=\"scorer\"}[30s])) / sum(rate(transaction_processing_seconds_count{job=\"scorer\"}[30s]))",
+          "legendFormat": "Обработка · среднее",
+          "format": "time_series",
+          "range": true
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(transaction_preprocessing_seconds_bucket{job=\"scorer\"}[30s])))",
+          "legendFormat": "Подготовка признаков · p95",
+          "format": "time_series",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Скоры в потоке",
+      "type": "heatmap",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "Количество транзакций по диапазонам скора за последние 15 секунд.",
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "color": {
+          "scheme": "Blues",
+          "mode": "scheme",
+          "scale": "linear"
+        },
+        "yAxis": {
+          "min": 0,
+          "max": 1,
+          "decimals": 2
+        },
+        "filterValues": {
+          "le": 0
+        },
+        "tooltip": {
+          "show": true,
+          "yHistogram": false
+        },
+        "legend": {
+          "show": true
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (le) (increase(fraud_score_bucket{job=\"scorer\"}[15s]))",
+          "legendFormat": "{{le}}",
+          "format": "heatmap",
+          "range": true
+        }
+      ]
+    }
+  ]
+}

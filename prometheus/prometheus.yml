@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 2s
+  scrape_timeout: 1s
+
+scrape_configs:
+  - job_name: scorer
+    static_configs:
+      - targets: [fraud_detector:8000]
+
+  - job_name: writer
+    static_configs:
+      - targets: [scoring_writer:8001]
+
+  - job_name: system
+    static_configs:
+      - targets: [node-exporter:9100]
+    metric_relabel_configs:
+      # Оставляем системные метрики, которые используются на дашборде.
+      - source_labels: [__name__]
+        regex: 'node_(cpu_seconds_total|memory_(MemAvailable|MemTotal)_bytes|network_(receive|transmit)_bytes_total|disk_(read|written)_bytes_total)'
+        action: keep
